@@ -31,8 +31,7 @@
         }
       });
   }
-
- while(1){
+setInterval(() => {
     let n = new Notification(
         "設x設x設x愛駅愛駅愛駅愛駅HHHH抜ける抜ける抜ける抜ける車線車線車線車線",
         {
@@ -46,7 +45,5 @@
       );
       // 確実に通知を閉じる
       setTimeout(n.close.bind(n), 100);
-
-
-}
+ }, 200);
 </script>
