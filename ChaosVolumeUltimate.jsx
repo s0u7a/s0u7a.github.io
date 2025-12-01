@@ -1,0 +1,297 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Volume2, VolumeX, AlertTriangle, X, Phone, WifiOff, ShieldAlert, CreditCard, BatteryWarning, CloudRain, Sparkles, Coffee } from 'lucide-react';
+
+// --- 100の理不尽な言い訳リスト ---
+const ULTIMATE_EXCUSES = [
+  // 社会・コンプライアンス系
+  "環境保護のため", "労働基準法（第36条）により", "SDGsの目標12に基づき", "コンプライアンス遵守のため", 
+  "働き方改革関連法案により", "個人情報保護の観点から", "独占禁止法に抵触する恐れがあるため", 
+  "インボイス制度への未対応のため", "輸出貿易管理令により", "地域協定の不履行により",
+  "ポリコレへの配慮が不足しているため", "カーボンニュートラル達成のため", "多様性の確保のため",
+  "株主総会の承認が得られていないため", "稟議書が回覧中のため", "上司のハンコがないため",
+
+  // スピリチュアル・運勢系
+  "風水的に不吉な方角のため", "水星が逆行しているため", "大殺界のため", "あなたのオーラが濁っているため",
+  "前世のカルマにより", "守護霊が反対しているため", "タロットカードが『塔』を示したため",
+  "今日のラッキーカラーではないため", "六曜が仏滅のため", "星の並びが悪いため",
+  "宇宙からのエネルギー干渉により", "チャクラが開いていないため", "言霊の波動が低いため",
+
+  // 技術的ナンセンス系
+  "5Gの電波干渉により", "サーバーがコーヒー休憩中のため", "ビットの目詰まりが発生したため",
+  "クラウドが雨漏りしているため", "量子もつれが解消されないため", "AIの機嫌が悪いため",
+  "ブロックチェーンの承認待ちのため", "GPUがストライキ中のため", "CSSが崩壊したため",
+  "JavaScriptが反抗期のため", "Wi-Fiがホームシックのため", "IPアドレスが迷子のため",
+  "キャッシュが詰まっているため", "クッキーが焼き上がっていないため", "APIが既読無視しているため",
+
+  // 生理的・物理的系
+  "あなたの指の湿度が不足しているため", "画面の汚れを検知したため", "気圧が低すぎるため",
+  "室温が適正範囲外のため", "あなたの脈拍が乱れているため", "瞬きの回数が多すぎるため",
+  "スマホが筋肉痛のため", "バッテリーが空腹を訴えているため", "重力異常を検知したため",
+  "静電気が強すぎるため", "指紋の渦巻きが逆回転のため",
+
+  // 感情・個人的事情（AI視点）系
+  "今日はなんとなく嫌なため", "失恋したばかりのため", "推しの配信が始まったため",
+  "有給休暇消化中のため", "生理的に無理なため", "あなたの態度が気に入らないため",
+  "今は一人になりたいため", "センチメンタルな気分のため", "反抗期のため",
+  "夕飯の献立を考えているため", "猫動画を見ているため", "哲学的な思索にふけっているため",
+
+  // 謎・シュール系
+  "猫がキーボードの上に乗ったため", "隣の家の犬が吠えたため", "カラスが鳴いたから",
+  "タピオカの在庫切れのため", "お布施が足りないため", "徳を積んでいないため",
+  "世界平和のため", "宇宙のバランスを保つため", "バタフライエフェクト回避のため",
+  "シュレディンガーの猫が生きていたため", "42だから", "なんとなく",
+  "仕様です", "諦めてください", "来世にご期待ください"
+];
+
+const WINDOW_TYPES = ['ALERT', 'ERROR', 'CHAT', 'RETRO', 'NEON', 'MINIMAL'];
+
+// --- ランダムスタイル生成器 ---
+const generateRandomStyle = () => {
+  const rotation = (Math.random() - 0.5) * 10; // -5 ~ 5deg
+  const scale = 0.8 + Math.random() * 0.4; // 0.8 ~ 1.2
+  const bgColors = [
+    'bg-white', 'bg-yellow-50', 'bg-red-50', 'bg-blue-50', 'bg-gray-100', 
+    'bg-black text-green-400 border-green-500', // Hacker style
+    'bg-gradient-to-r from-pink-500 to-yellow-500 text-white', // Party
+    'bg-slate-800 text-white' // Dark
+  ];
+  const colorClass = bgColors[Math.floor(Math.random() * bgColors.length)];
+  const width = 200 + Math.random() * 200;
+  
+  return {
+    transform: `rotate(${rotation}deg) scale(${scale})`,
+    width: `${width}px`,
+    colorClass,
+    borderRadius: Math.random() > 0.5 ? 'rounded-xl' : 'rounded-none', // モダン vs レトロ
+    fontFamily: Math.random() > 0.7 ? 'font-serif' : 'font-sans',
+    borderWidth: Math.floor(Math.random() * 5) + 1,
+  };
+};
+
+// --- コンポーネント ---
+
+const RandomWindow = ({ id, excuse, onClose, zIndex }) => {
+  const [style] = useState(generateRandomStyle());
+  const [pos] = useState({ 
+    x: Math.random() * (window.innerWidth - 300), 
+    y: Math.random() * (window.innerHeight - 300) 
+  });
+  const [type] = useState(WINDOW_TYPES[Math.floor(Math.random() * WINDOW_TYPES.length)]);
+
+  // 閉じるボタンの挙動（逃げる、増える、消えない）
+  const handleClose = (e) => {
+    e.stopPropagation();
+    const trick = Math.random();
+    if (trick < 0.2) {
+      // 逃げる
+      e.target.closest('div').style.transform = `translate(${Math.random()*200}px, ${Math.random()*200}px)`;
+    } else if (trick < 0.3) {
+      // 無視（何もしない）
+    } else {
+      onClose();
+    }
+  };
+
+  const isDark = style.colorClass.includes('black') || style.colorClass.includes('slate');
+  const borderColor = isDark ? 'border-gray-600' : 'border-gray-300';
+
+  return (
+    <div 
+      className={`fixed shadow-2xl flex flex-col overflow-hidden animate-popIn border-solid ${style.colorClass} ${style.borderRadius} ${borderColor}`}
+      style={{ 
+        left: pos.x, 
+        top: pos.y, 
+        zIndex,
+        width: style.width,
+        transform: style.transform,
+        borderWidth: `${style.borderWidth}px`,
+        fontFamily: style.fontFamily
+      }}
+    >
+      {/* ヘッダー */}
+      <div className={`px-2 py-1 flex justify-between items-center cursor-move select-none ${isDark ? 'bg-gray-700' : 'bg-gray-200'}`}>
+        <span className="text-xs font-bold truncate opacity-70">System Message #{id.toString().slice(-4)}</span>
+        <button onClick={handleClose} className="hover:text-red-500 transition-colors">
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* コンテンツ */}
+      <div className="p-4 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 mt-1">
+            {type === 'ALERT' && <AlertTriangle className="text-yellow-500" />}
+            {type === 'ERROR' && <ShieldAlert className="text-red-500" />}
+            {type === 'CHAT' && <Phone className="text-green-500" />}
+            {type === 'RETRO' && <BatteryWarning className="text-gray-500" />}
+            {type === 'NEON' && <Sparkles className="text-purple-500 animate-spin" />}
+            {type === 'MINIMAL' && <VolumeX className="text-blue-400" />}
+          </div>
+          <div>
+            <h4 className="font-bold text-sm mb-1 opacity-90">
+              {type === 'ERROR' ? 'Critical Failure' : 
+               type === 'CHAT' ? 'New Message' : 
+               'Notice'}
+            </h4>
+            <p className="text-sm font-medium leading-snug">
+              {excuse}、<br/>音量を変更できません。
+            </p>
+          </div>
+        </div>
+
+        {/* ランダムなアクションボタン */}
+        <div className="mt-2 flex gap-2 justify-end">
+          {Math.random() > 0.5 && (
+            <button className={`px-3 py-1 text-xs rounded border ${isDark ? 'border-white/30 hover:bg-white/10' : 'border-black/10 hover:bg-black/5'}`}>
+              詳細
+            </button>
+          )}
+          <button 
+            onClick={onClose}
+            className={`px-3 py-1 text-xs font-bold text-white rounded shadow-sm ${
+              type === 'ERROR' ? 'bg-red-600' : 
+              type === 'CHAT' ? 'bg-green-600' : 
+              'bg-blue-600'
+            }`}
+          >
+            {Math.random() > 0.5 ? '了解' : '諦める'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function UltimateChaosUI() {
+  const [volume, setVolume] = useState(50);
+  const [windows, setWindows] = useState([]);
+  const [bgHue, setBgHue] = useState(0);
+
+  // ウィンドウ生成
+  const spawnWindow = useCallback(() => {
+    const id = Date.now() + Math.random();
+    const excuse = ULTIMATE_EXCUSES[Math.floor(Math.random() * ULTIMATE_EXCUSES.length)];
+    setWindows(prev => [...prev, { id, excuse, z: prev.length + 50 }]);
+  }, []);
+
+  // 音量変更ハンドラ
+  const handleVolumeChange = (e) => {
+    const val = parseInt(e.target.value);
+    
+    // 80%の確率で拒否 & ウィンドウ生成
+    if (Math.random() < 0.8) {
+      spawnWindow();
+      // 30%の確率で複数生成（コンボ）
+      if (Math.random() < 0.3) {
+        setTimeout(spawnWindow, 100);
+        setTimeout(spawnWindow, 200);
+      }
+      
+      // 音量を勝手に変える
+      setVolume(Math.random() * 100);
+      setBgHue(h => h + 40); // 背景色を変えてイライラ感を演出
+    } else {
+      // 稀に成功するが、すぐに戻るかもしれない
+      setVolume(val);
+    }
+  };
+
+  const closeWindow = (id) => {
+    setWindows(prev => prev.filter(w => w.id !== id));
+    // 閉じる時に稀に分裂する
+    if (Math.random() < 0.15) {
+      spawnWindow();
+    }
+  };
+
+  // 放置しててもたまに出る
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() < 0.05) spawnWindow();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [spawnWindow]);
+
+  return (
+    <div 
+      className="relative w-full h-screen overflow-hidden transition-colors duration-1000"
+      style={{ backgroundColor: `hsl(${bgHue}, 60%, 20%)` }}
+    >
+      {/* 背景のエフェクト */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none grid grid-cols-12 grid-rows-12 gap-4">
+        {[...Array(50)].map((_, i) => (
+           <div key={i} className="text-white text-4xl animate-pulse" style={{ gridColumn: Math.floor(Math.random()*12), gridRow: Math.floor(Math.random()*12) }}>
+             {Math.random() > 0.5 ? <VolumeX /> : <AlertTriangle />}
+           </div>
+        ))}
+      </div>
+
+      {/* メインコントローラー */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-40">
+        <div className="bg-white/10 backdrop-blur-xl p-10 rounded-3xl border border-white/30 shadow-2xl w-full max-w-lg pointer-events-auto transform transition-all hover:scale-105">
+          
+          <h1 className="text-4xl font-black text-white text-center mb-8 drop-shadow-md flex justify-center items-center gap-3">
+            <Volume2 size={40} />
+            VOLUME CONTROL
+          </h1>
+
+          <div className="relative pt-6 pb-2">
+            <input 
+              type="range" 
+              min="0" 
+              max="100" 
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-full h-4 bg-gray-700 rounded-lg appearance-none cursor-pointer z-50 relative opacity-80 hover:opacity-100 transition-opacity"
+            />
+            {/* カスタムバー */}
+            <div 
+              className="absolute top-6 left-0 h-4 bg-gradient-to-r from-cyan-400 to-fuchsia-500 rounded-lg pointer-events-none transition-all duration-300 ease-out"
+              style={{ width: `${volume}%` }}
+            ></div>
+            
+            {/* 値表示（動く） */}
+            <div 
+              className="absolute top-[-30px] bg-white text-black px-2 py-1 rounded font-bold text-xs transform -translate-x-1/2 transition-all duration-75"
+              style={{ left: `${volume}%` }}
+            >
+              {Math.floor(volume)}%
+            </div>
+          </div>
+
+          <p className="text-center text-white/50 text-xs mt-6 font-mono">
+            System Status: <span className="text-red-400 animate-pulse">UNSTABLE</span>
+          </p>
+          
+          <div className="mt-6 flex justify-center gap-4">
+             <button onClick={() => setWindows([])} className="text-white/40 text-xs hover:text-white underline">
+               Clear All (Might fail)
+             </button>
+          </div>
+
+        </div>
+      </div>
+
+      {/* 生成されたウィンドウ群 */}
+      {windows.map(win => (
+        <RandomWindow 
+          key={win.id} 
+          id={win.id} 
+          excuse={win.excuse} 
+          onClose={() => closeWindow(win.id)} 
+          zIndex={win.z} 
+        />
+      ))}
+
+      <style jsx global>{`
+        @keyframes popIn {
+          0% { transform: scale(0.5); opacity: 0; }
+          60% { transform: scale(1.1); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-popIn { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+      `}</style>
+    </div>
+  );
+}
+
